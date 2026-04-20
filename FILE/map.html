@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>СпортОбъекты</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 400px; }
+    </style>
+</head>
+<body>
+    <h2>Спортивные объекты</h2>
+    <div id="map"></div>
+
+    <div style="margin: 20px 0;">
+        <input id="name" placeholder="Название">
+        <input id="type" placeholder="Тип">
+        <input id="lat" placeholder="Широта">
+        <input id="lan" placeholder="Долгота">
+    </div>
+
+    <h3>Список оиъектов</h3>
+    <table>
+        <thead><tr><th>Название</th></tr></thead>
+        <tbody id="list"></tbody>
+    </table>
+    <script>
+        var map = L.map('map').setView([55.75, 37.62], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        var markers = L.layerGroup().addTo(map);
+
+        async function loadData(){
+            let res = await fetch('/api/abjects');
+            let objects = await res.json();
+
+            markers.clearLayers();
+
+            let html = '';
+            for (let o of objects) {
+                let m = L.marker([o.lat, o.lon]).addTo(markers);
+                m.bindPopup(o.name + '<br>' + o.type + '<br><button onclick=deleteObject(' + o.id +')">Удалить</button>');
+                html += '<tr>' +
+                    '/td' + o.name + '</td>' +
+                    '/td' + o.type + '</td>' +
+                    '/td' + o.lat + '</td>' +
+                    '/td' + o.lon + '</td>' +
+                    '<td><button class="del" onclick="deleteObject(' + o.id + ')">Удл>/button></tr>' +
+                    '</tr>';
+            }
+            document.getElementById('list').innerHTML = html || '<tr><td colspan="5">Нет обэектов</td></tr>';
+        };
+        async function addObjects(){
+            let data = {
+                name: document.getElementById('name').value,
+                type: document.getElementById('type').value,
+                lat: parseFloat(document.getElementById('lat').value),
+                lon: parseFloat(document.getElementById('lon').value)
+            };
+        
+            if (!data.name || !data.type || isNaN(data.lat) || isNaN(data.lon)){
+                alert('Заполните всё');
+                return
+            }
+            await fetch('/api/objects/', {
+               method: 'POST',
+               headers: {'Content-Type': 'application/json'},
+               body: JSON.stringify(data)
+            });
+
+            document.getElementById('name').value = '';
+            document.getElementById('type').value = '';
+            document.getElementById('lat').value = '';
+            document.getElementById('lon').value = '';
+
+            loadData()
+        }
+
+        async function deleteObject(id) {
+            if (confirm('Удалить')) {
+                await fetch('/api/objects/' + id, {method: 'DELETE'});
+                loadData();
+            }
+        }      
+        
+   
+    </script>
+</body>
+</html>
+
+
