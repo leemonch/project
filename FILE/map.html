@@ -19,7 +19,7 @@
         <input id="lan" placeholder="Долгота">
     </div>
 
-    <h3>Список оиъектов</h3>
+    <h3>Список объектов</h3>
     <table>
         <thead><tr><th>Название</th></tr></thead>
         <tbody id="list"></tbody>
@@ -31,7 +31,7 @@
         var markers = L.layerGroup().addTo(map);
 
         async function loadData(){
-            let res = await fetch('/api/abjects');
+            let res = await fetch('/api/objects');
             let objects = await res.json();
 
             markers.clearLayers();
@@ -39,16 +39,16 @@
             let html = '';
             for (let o of objects) {
                 let m = L.marker([o.lat, o.lon]).addTo(markers);
-                m.bindPopup(o.name + '<br>' + o.type + '<br><button onclick=deleteObject(' + o.id +')">Удалить</button>');
+                m.bindPopup(o.name + '<br>' + o.type + '<br><button onclick="deleteObject(' + o.id +')">Удалить</button>');
                 html += '<tr>' +
-                    '/td' + o.name + '</td>' +
-                    '/td' + o.type + '</td>' +
-                    '/td' + o.lat + '</td>' +
-                    '/td' + o.lon + '</td>' +
-                    '<td><button class="del" onclick="deleteObject(' + o.id + ')">Удл>/button></tr>' +
+                    'td' + o.name + '</td>' +
+                    'td' + o.type + '</td>' +
+                    'td' + o.lat + '</td>' +
+                    'td' + o.lon + '</td>' +
+                    '<td><button class="del" onclick="deleteObject(' + o.id + ')">Удлить</button></tr>' +
                     '</tr>';
             }
-            document.getElementById('list').innerHTML = html || '<tr><td colspan="5">Нет обэектов</td></tr>';
+            document.getElementById('list').innerHTML = html || '<tr><td colspan="5">Нет объектов</td></tr>';
         };
         async function addObjects(){
             let data = {
@@ -58,7 +58,7 @@
                 lon: parseFloat(document.getElementById('lon').value)
             };
         
-            if (!data.name || !data.type || isNaN(data.lat) || isNaN(data.lon)){
+            if (!data.name || !data.type || isNaN(data.lon) || isNaN(data.lat)){
                 alert('Заполните всё');
                 return
             }
@@ -81,11 +81,16 @@
                 await fetch('/api/objects/' + id, {method: 'DELETE'});
                 loadData();
             }
-        }      
-        
+        }
+
    
     </script>
 </body>
 </html>
+<script>
+    fetch('https://raw.githubusercontent.com/alisamuratova308-oss/project/main/data.json')
+    .then(r => r.json())
+    .then(data => console.log(data));
 
+</script>
 
