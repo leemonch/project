@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>СпортОбъекты</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 400px; }
+        button { 
+            margin: 5px; 
+            cursor: pointer; 
+            padding: 5px 15px;
+        }
+        .del { 
+            background-color: #ff4444; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        input {
+            margin: 5px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Спортивные объекты</h2>
+    <div id="map"></div>
+
+    <div style="margin: 20px 0;">
+        <input id="name" placeholder="Название">
+        <input id="type" placeholder="Тип">
+        <input id="lat" placeholder="Широта">
+        <input id="lon" placeholder="Долгота">
+        <button onclick="addObjects()" style="background-color: #4CAF50; color: white;">➕ Добавить</button>
+    </div>
+
+    <h3>Список объектов</h3>
+    <table border="1">
+        <thead>
+            <tr><th>Название</th><th>Тип</th><th>Широта</th><th>Долгота</th><th>Действие</th></tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+
+    <script>
+        var map = L.map('map').setView([55.75, 37.62], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        var markers = L.layerGroup().addTo(map);
+
+        async function loadData() {
+            let res = await fetch('http://127.0.0.1:3000/api/objects');
+            let objects = await res.json();
+            
+            markers.clearLayers();
+            let html = '';
+            
+            for (let o of objects) {
+                let m = L.marker([o.lat, o.lon]).addTo(markers);
+                m.bindPopup(o.name + '<br>' + o.type + '<br><button onclick="deleteObject(' + o.id + ')">Удалить</button>');
+                
+                html += '<tr>' +
+                    '<td>' + o.name + '</td>' +
+                    '<td>' + o.type + '</td>' +
+                    '<td>' + o.lat + '</td>' +
+                    '<td>' + o.lon + '</td>' +
+                    '<td><button class="del" onclick="deleteObject(' + o.id + ')">🗑 Удалить</button></td>' +
+                '</tr>';
+            }
+            
+            document.getElementById('list').innerHTML = html || '<tr><td colspan="5">Нет объектов</td></tr>';
+        }
+
+        async function addObjects() {
+            let data = {
+                name: document.getElementById('name').value,
+                type: document.getElementById('type').value,
+                lat: parseFloat(document.getElementById('lat').value),
+                lon: parseFloat(document.getElementById('lon').value)
+            };
+            
+            if (!data.name || !data.type || isNaN(data.lat) || isNaN(data.lon)) {
+                alert('❌ Заполните все поля!');
+                return;
+            }
+            
+            await fetch('http://127.0.0.1:3000/api/objects/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            
+            // Очищаем поля
+            document.getElementById('name').value = '';
+            document.getElementById('type').value = '';
+            document.getElementById('lat').value = '';
+            document.getElementById('lon').value = '';
+            
+            alert('✅ Объект добавлен!');
+            loadData();
+        }
+
+        async function deleteObject(id) {
+            if (confirm('Удалить объект?')) {
+                await fetch('http://127.0.0.1:3000/api/objects/' + id, {method: 'DELETE'});
+                loadData();
+            }
+        }
+// Загружаем данные при открытии страницы
+        loadData();
+    </script>
+</body>
+</html>
+```
+
