@@ -94,4 +94,4 @@ async def delete_object(object_id: int):
 # Запуск сервера (для прямого запуска файла)
 if __name__ == "__main__":
     import uvicorn
-    uvicorn(app.runapp, host="127.0.0.1", port=3000)
+    uvicorn.run(app, host="127.0.0.1", port=3000)
