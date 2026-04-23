@@ -22,6 +22,17 @@
             margin: 5px;
             padding: 5px;
         }
+
+        .deleteAll {
+            background-color: #ff4444;
+            color: rgb(255, 255, 255);
+            border: none;
+            padding: 5px 15px;
+            margin-left: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            
+        }
     </style>
 </head>
 <body>
@@ -34,6 +45,7 @@
         <input id="lat" placeholder="Широта">
         <input id="lon" placeholder="Долгота">
         <button onclick="addObjects()" style="background-color: #4CAF50; color: white;">➕ Добавить</button>
+        <button onclick="deleteALLobjects()" class="deleteAll">Удалить всё</button>
     </div>
 
     <h3>Список объектов</h3>
@@ -81,8 +93,27 @@
             };
             
             if (!data.name || !data.type || isNaN(data.lat) || isNaN(data.lon)) {
-                alert('❌ Заполните все поля!');
+                alert('❌ Заполните все поля');
                 return;
+            }
+            if (isNaN(lat) || isNaN(lon)) {
+                alert('❌ координаты должны быть числами');
+                return;
+            }
+            const latNum = parseFloat(lat);
+            const lonNom = parseFloat(lon)
+
+            if (latNum < -90 || lonNom > 90) {
+                alert('');
+                return;
+            }
+            let res = await fetch('http://127.0.0.1:3000/api/objects');
+            let objects = await res.json();
+            for (let obj of objects) {
+                if (obj.name === data.name) {
+                    alert('❌ Такой объект уже есть');
+                    return;
+                }
             }
             
             await fetch('http://127.0.0.1:3000/api/objects/', {
@@ -91,7 +122,7 @@
                 body: JSON.stringify(data)
             });
             
-            // Очищаем поля
+           
             document.getElementById('name').value = '';
             document.getElementById('type').value = '';
             document.getElementById('lat').value = '';
@@ -107,7 +138,19 @@
                 loadData();
             }
         }
-// Загружаем данные при открытии страницы
+        
+        async function deleteALLobjects(){
+            if (confirm('Удалить все объекты?')) {
+                let res = await fetch('http://127.0.0.1:3000/api/objects');
+                let objects = await res.json();
+                for (let obj of objects){
+                    await fetch('http://127.0.0.1:3000/api/objects/' + obj.id, {method:'DELETE'});
+                }
+                alert('Всё удалено');
+                loadData();
+            }
+        }
+
         loadData()
     </script>
 </body>
