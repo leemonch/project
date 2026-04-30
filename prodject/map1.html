@@ -96,12 +96,8 @@
                 alert('❌ Заполните все поля');
                 return;
             }
-            if (isNaN(lat) || isNaN(lon)) {
-                alert('❌ координаты должны быть числами');
-                return;
-            }
-            const latNum = parseFloat(lat);
-            const lonNom = parseFloat(lon)
+            const latNum = data.lat;
+            const lonNom = data.lon;
 
             if (latNum < -90 || lonNom > 90) {
                 alert('');
