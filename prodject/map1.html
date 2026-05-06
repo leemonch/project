@@ -86,11 +86,16 @@
 
         async function addObjects() {
             let data = {
-                name: document.getElementById('name').value,
-                type: document.getElementById('type').value,
+                name: document.getElementById('name').value.trim(),
+                type: document.getElementById('type').value.trim(),
                 lat: parseFloat(document.getElementById('lat').value),
                 lon: parseFloat(document.getElementById('lon').value)
             };
+
+            if (data.name == "" || data.type === "") {
+                alert('названия и тип не могут быть пробелами');
+                return;
+            }
             
             if (!data.name || !data.type || isNaN(data.lat) || isNaN(data.lon)) {
                 alert('❌ Заполните все поля');
@@ -136,9 +141,14 @@
         }
         
         async function deleteALLobjects(){
+            let res = await fetch('http://127.0.0.1:3000/api/objects');
+            let objects = await res.json();
+            if (objects.length == 0){
+                alert('Нет объектов для удаления');
+                return;
+            }
+
             if (confirm('Удалить все объекты?')) {
-                let res = await fetch('http://127.0.0.1:3000/api/objects');
-                let objects = await res.json();
                 for (let obj of objects){
                     await fetch('http://127.0.0.1:3000/api/objects/' + obj.id, {method:'DELETE'});
                 }
