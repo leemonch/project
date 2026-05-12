@@ -31,7 +31,102 @@
             margin-left: 10px;
             font-weight: bold;
             cursor: pointer;
-            
+        }
+        .preview-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+        .photo-container {
+            position: relative;
+            display: inline-block;
+            margin: 5px;
+        }
+        .remove-photo {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .photo-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 2px;
+            border: 1px solid #ddd;
+        }
+        .photo-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .add-photo-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .photos-list {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        .popup-photo {
+            max-width: 200px;
+            max-height: 150px;
+            margin-top: 5px;
+            border-radius: 4px;
+        }
+        .search-container {
+            margin: 20px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .search-container input {
+            flex: 1;
+            padding: 8px;
+            font-size: 16px;
+        }
+        .search-container button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            cursor: pointer;
+        }
+        .search-container button:hover {
+            background-color: #0b7dda;
+        }
+        .clear-search {
+            background-color: #ff9800 !important;
+        }
+        .clear-search:hover {
+            background-color: #e68a00 !important;
+        }
+        .search-result {
+            margin-left: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -39,127 +134,375 @@
     <h2>Спортивные объекты</h2>
     <div id="map"></div>
 
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="🔍 Поиск по названию или типу..." onkeyup="if(event.key === 'Enter') searchObjects()">
+        <button onclick="searchObjects()">🔍 Найти</button>
+        <button onclick="clearSearch()" class="clear-search">✖ Очистить</button>
+        <span id="searchResult" class="search-result"></span>
+    </div>
+
     <div style="margin: 20px 0;">
-        <input id="name" placeholder="Название">
+16:12
+<input id="name" placeholder="Название">
         <input id="type" placeholder="Тип">
         <input id="lat" placeholder="Широта">
         <input id="lon" placeholder="Долгота">
-        <button onclick="addObjects()" style="background-color: #4CAF50; color: white;">➕ Добавить</button>
-        <button onclick="deleteALLobjects()" class="deleteAll">Удалить всё</button>
+
+        <div style="margin: 10px 0;">
+            <label>Фотографии (до 5 штук)</label>
+            <input type="file" id="photos" accept="image/*" multiple>
+            <div id="preview" style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;"></div>
+        </div>
+
+        <button onclick="addObjects()" style="background-color: #4CAF50; color: white;"> Добавить</button>
+        <button onclick="deleteALLobjects()" class="deleteAll">🗑 Удалить всё</button>
     </div>
 
     <h3>Список объектов</h3>
-    <table border="1">
-        <thead>
-            <tr><th>Название</th><th>Тип</th><th>Широта</th><th>Долгота</th><th>Действие</th></tr>
-        </thead>
-        <tbody id="list"></tbody>
-    </table>
-
+    <div style="overflow-x: auto;">
+        <table border="1" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr><th>Название</th><th>Тип</th><th>Широта</th><th>Долгота</th><th>Фото</th><th>Действие</th></tr>
+            </thead>
+            <tbody id="list"></tbody>
+        </table>
+    </div>
+    
     <script>
+       
         var map = L.map('map').setView([55.75, 37.62], 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         var markers = L.layerGroup().addTo(map);
 
-        async function loadData() {
-            let res = await fetch('http://127.0.0.1:3000/api/objects');
-            let objects = await res.json();
+        let selectedPhotos = [];
+        let allObjects = []; 
+        let currentSearchTerm = '';
+
+        
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        
+        document.getElementById('photos').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length > 5) {
+                alert('Можно загрузить не более 5 фото!');
+                this.value = '';
+                selectedPhotos = [];
+                document.getElementById('preview').innerHTML = '';
+                return;
+            }
+            selectedPhotos = files;
             
+            const preview = document.getElementById('preview');
+            preview.innerHTML = '';
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const container = document.createElement('div');
+                    container.className = 'photo-container';
+                    container.innerHTML = `
+                        <img src="${e.target.result}" class="preview-img">
+                        <button class="remove-photo" data-index="${index}">×</button>
+                    `;
+                    preview.appendChild(container);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+     
+        document.getElementById('preview').addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-photo')) {
+                const index = parseInt(e.target.dataset.index);
+                selectedPhotos.splice(index, 1);
+                const dataTransfer = new DataTransfer();
+                selectedPhotos.forEach(file => dataTransfer.items.add(file));
+                document.getElementById('photos').files = dataTransfer.files;
+                const event = new Event('change');
+                document.getElementById('photos').dispatchEvent(event);
+            }
+        });
+
+        
+        function searchObjects() {
+            const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+            currentSearchTerm = searchTerm;
+            
+            if (!searchTerm) {
+                clearSearch();
+                return;
+            }
+
+
+            const filtered = allObjects.filter(obj => 
+                obj.name.toLowerCase().includes(searchTerm) || 
+                obj.type.toLowerCase().includes(searchTerm)
+            );
+            
+           
+             const resultSpan = document.getElementById('searchResult');
+            if (filtered.length === 0) {
+                resultSpan.innerHTML = ' Ничего не найдено';
+                resultSpan.style.color = 'red';
+            } else {
+                resultSpan.innerHTML = ` Найдено: ${filtered.length} объект(ов)`;
+                resultSpan.style.color = 'green';
+            }
+            
+            
+            displayObjects(filtered, searchTerm);
+        }
+
+        
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            currentSearchTerm = '';
+            document.getElementById('searchResult').innerHTML = '';
+            displayObjects(allObjects, '');
+        }
+
+   
+        function displayObjects(objects, searchTerm) {
             markers.clearLayers();
             let html = '';
             
             for (let o of objects) {
-                let m = L.marker([o.lat, o.lon]).addTo(markers);
-                m.bindPopup(o.name + '<br>' + o.type + '<br><button onclick="deleteObject(' + o.id + ')">Удалить</button>');
+               
+                let popupContent = `
+                    <div style="text-align: center;">
+                        <b>${highlightText(o.name, searchTerm)}</b><br>
+                        ${highlightText(o.type, searchTerm)}<br>
+                `;
+                
+             
+                if (o.photos && o.photos.length > 0 && o.photos[0]) {
+                    popupContent += `<img src="${o.photos[0]}" class="popup-photo" style="max-width: 200px; max-height: 150px; margin-top: 5px;"><br>`;
+                } else {
+                    popupContent += `<div style="margin-top: 5px;">📷 Нет фото</div><br>`;
+                }
+                
+                popupContent += `<button onclick="deleteObject(${o.id})" style="margin-top: 5px;">🗑 Удалить</button>
+                    </div>`;
+                
+        
+                let marker;
+                if (o.photos && o.photos.length > 0 && o.photos[0]) {
+                    const customIcon = L.divIcon({
+                        html: `<img src="${o.photos[0]}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 0 5px black;">`,
+                        iconSize: [40, 40],
+                        className: 'custom-marker-icon'
+                    });
+                    marker = L.marker([o.lat, o.lon], { icon: customIcon }).addTo(markers);
+                } else {
+                    marker = L.marker([o.lat, o.lon]).addTo(markers);
+                }
+                marker.bindPopup(popupContent);
+                
+            
+                let photosHtml = '';
+                if (o.photos && o.photos.length > 0) {
+                    photosHtml = '<div class="photos-list">';
+                    for (let i = 0; i < Math.min(o.photos.length, 5); i++) {
+                        if (o.photos[i]) {
+                            photosHtml += `<img src="${o.photos[i]}" class="photo-thumb" onclick="window.open('${o.photos[i]}')" title="Фото ${i+1}">`;
+                        }
+                    }
+                    photosHtml += '</div>';
+                    photosHtml += `<div><small>(${o.photos.length} фото)</small></div>`;
+                } else {
+
+                photosHtml = 'Нет фото';
+                }
                 
                 html += '<tr>' +
-                    '<td>' + o.name + '</td>' +
-                    '<td>' + o.type + '</td>' +
+                    '<td>' + highlightText(o.name, searchTerm) + '<table>' +
+                    '<td>' + highlightText(o.type, searchTerm) + '</td>' +
                     '<td>' + o.lat + '</td>' +
                     '<td>' + o.lon + '</td>' +
-                    '<td><button class="del" onclick="deleteObject(' + o.id + ')">🗑 Удалить</button></td>' +
+                    '<td>' + photosHtml + '</td>' +
+                    '<td>' +
+                        '<button class="del" onclick="deleteObject(' + o.id + ')">🗑 Удалить</button><br>' +
+                        '<button onclick="addOnePhoto(' + o.id + ')" style="background: #4CAF50; margin-top: 5px;">📷 Добавить фото</button>' +
+                    '</td>' +
                 '</tr>';
             }
             
-            document.getElementById('list').innerHTML = html || '<tr><td colspan="5">Нет объектов</td></tr>';
+            document.getElementById('list').innerHTML = html || '<tr><td colspan="6">Нет объектов</td></tr>';
+            
+      
+            if (objects.length > 0 && searchTerm) {
+                map.setView([objects[0].lat, objects[0].lon], 14);
+            }
         }
 
-        async function addObjects() {
-            let data = {
-                name: document.getElementById('name').value.trim(),
-                type: document.getElementById('type').value.trim(),
-                lat: parseFloat(document.getElementById('lat').value),
-                lon: parseFloat(document.getElementById('lon').value)
-            };
+    
+        async function loadData() {
+            try {
+                let res = await fetch('http://127.0.0.1:3000/api/objects');
+                allObjects = await res.json();
+                
+            
+                if (currentSearchTerm) {
+                    searchObjects();
+                } else {
+                    displayObjects(allObjects, '');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                document.getElementById('list').innerHTML = '<tr><td colspan="6">Ошибка загрузки数据</td></tr>';
+            }
+        }
 
-            if (data.name == "" || data.type === "") {
-                alert('названия и тип не могут быть пробелами');
+       
+        async function addObjects() {
+            const name = document.getElementById('name').value.trim();
+            const type = document.getElementById('type').value.trim();
+            const lat = parseFloat(document.getElementById('lat').value);
+            const lon = parseFloat(document.getElementById('lon').value);
+            
+            if (!name || !type) {
+                alert('❌ Заполните название и тип');
                 return;
             }
             
-            if (!data.name || !data.type || isNaN(data.lat) || isNaN(data.lon)) {
-                alert('❌ Заполните все поля');
+            if (isNaN(lat) || isNaN(lon)) {
+                alert('❌ Введите корректные координаты');
                 return;
             }
-            const latNum = data.lat;
-            const lonNom = data.lon;
-
-            if (latNum < -90 || lonNom > 90) {
-                alert('');
+            
+            if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                alert('❌ Координаты: широта -90..90, долгота -180..180');
                 return;
             }
-            let res = await fetch('http://127.0.0.1:3000/api/objects');
-            let objects = await res.json();
-            for (let obj of objects) {
-                if (obj.name === data.name) {
-                    alert('❌ Такой объект уже есть');
-                    return;
+            
+            let photos = [];
+            if (selectedPhotos.length > 0) {
+                for (let file of selectedPhotos) {
+                    try {
+                        const base64 = await fileToBase64(file);
+                        photos.push(base64);
+                    } catch (error) {
+                        console.error('Ошибка конвертации фото:', error);
+                    }
                 }
             }
             
-            await fetch('http://127.0.0.1:3000/api/objects/', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
+            const data = { name, type, lat, lon, photos };
             
-           
-            document.getElementById('name').value = '';
-            document.getElementById('type').value = '';
-            document.getElementById('lat').value = '';
-            document.getElementById('lon').value = '';
-            
-            alert('✅ Объект добавлен!');
-            loadData();
+            try {
+               
+                if (allObjects.some(obj => obj.name === name)) {
+                    alert('❌ Объект с таким названием уже существует');
+                    return;
+                }
+                
+                await fetch('http://127.0.0.1:3000/api/objects/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+               
+                document.getElementById('name').value = '';
+                document.getElementById('type').value = '';
+                document.getElementById('lat').value = '';
+                document.getElementById('lon').value = '';
+
+                document.getElementById('photos').value = '';
+                document.getElementById('preview').innerHTML = '';
+                selectedPhotos = [];
+                
+                alert('✅ Объект добавлен!');
+                loadData();
+            } catch (error) {
+                console.error('Ошибка добавления:', error);
+                alert('❌ Ошибка при добавлении объекта');
+            }
         }
 
+     
         async function deleteObject(id) {
             if (confirm('Удалить объект?')) {
-                await fetch('http://127.0.0.1:3000/api/objects/' + id, {method: 'DELETE'});
-                loadData();
+                try {
+                    await fetch('http://127.0.0.1:3000/api/objects/' + id, { method: 'DELETE' });
+                    loadData();
+                } catch (error) {
+                    console.error('Ошибка удаления:', error);
+                }
             }
         }
         
-        async function deleteALLobjects(){
-            let res = await fetch('http://127.0.0.1:3000/api/objects');
-            let objects = await res.json();
-            if (objects.length == 0){
-                alert('Нет объектов для удаления');
-                return;
-            }
-
-            if (confirm('Удалить все объекты?')) {
-                for (let obj of objects){
-                    await fetch('http://127.0.0.1:3000/api/objects/' + obj.id, {method:'DELETE'});
+     
+        async function deleteALLobjects() {
+            try {
+                if (allObjects.length === 0) {
+                    alert('Нет объектов для удаления');
+                    return;
                 }
-                alert('Всё удалено');
-                loadData();
+                
+                if (confirm(`Удалить все ${allObjects.length} объектов?`)) {
+                    for (let obj of allObjects) {
+                        await fetch('http://127.0.0.1:3000/api/objects/' + obj.id, { method: 'DELETE' });
+                    }
+                    alert('✅ Все объекты удалены');
+                    loadData();
+                }
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
             }
         }
 
-        loadData()
+      
+        async function addOnePhoto(id) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const base64 = await fileToBase64(file);
+                
+                try {
+                    let obj = allObjects.find(o => o.id === id);
+                    
+                    if (!obj) {
+                        alert('❌ Объект не найден');
+                        return;
+                    }
+                    
+                    let photos = obj.photos || [];
+                    if (photos.length >= 5) {
+                        alert('❌ Максимум 5 фото');
+                        return;
+                    }
+                    
+                    photos.push(base64);
+                    await fetch(`http://127.0.0.1:3000/api/objects/${id}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ ...obj, photos })
+                    });
+                    
+                    alert('✅ Фото добавлено!');
+                    loadData();
+                } catch (error) {
+                    console.error('Ошибка добавления фото:', error);
+                    alert('❌ Ошибка при добавлении фото');
+                }
+            };
+            input.click();
+        }
+        
+       
+        loadData();
     </script>
 </body>
 </html>
-```
-
