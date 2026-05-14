@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>СпортОбъекты</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: "🏟️ ";
+            font-size: 32px;
+        }
+
+        h3 {
+            color: #2c3e50;
+            margin: 20px 0 15px 0;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h3::before {
+            content: "📋";
+        }
+
+        #map {
+            height: 400px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+            z-index: 1;
+        }
+
+        button {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        /* ПОИСК */
+        .search-container {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 60px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            flex-wrap: wrap;
+        }
+
+        .search-container input {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 40px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .search-container input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+
+        .search-container button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+        }
+
+        .search-container .clear-search {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+
+        .search-result {
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: auto;
+        }
+
+        /* ФОРМА */
+        .form-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+
+        /* Поле описания - широкое */
+        .full-width {
+            width: 100%;
+        }
+
+        .description-group {
+            margin-bottom: 15px;
+        }
+
+        .description-group label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .description-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.2s;
+        }
+
+        .description-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+
+        .photo-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .photo-label {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        #preview {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .preview-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .photo-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .remove-photo {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+        }
+
+        .btn-delete-all {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+        }
+
+        /* ========== ТАБЛИЦА С ПРОКРУТКОЙ ========== */
+        .table-wrapper {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            max-height: 500px;  /* ФИКСИРОВАННАЯ ВЫСОТА */
+            overflow-y: auto;   /* ВЕРТИКАЛЬНАЯ ПРОКРУТКА */
+        }
+
+        .modern-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .modern-table thead tr {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            position: sticky;   /* ЗАГОЛОВОК ПРИЛИПАЕТ */
+            top: 0;
+            z-index: 10;
+        }
+
+        .modern-table th {
+            color: white;
+            padding: 16px 12px;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: left;
+        }
+
+        .modern-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
+            color: #334155;
+        }
+
+        .modern-table tbody tr {
+            transition: all 0.2s;
+        }
+
+        .modern-table tbody tr:hover {
+            background: #f8fafc;
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        /* Ячейка с названием и типом */
+        .cell-name {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .cell-type {
+            display: inline-block;
+            background: #e2e8f0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        /* Ячейка с описанием */
+        .cell-description {
+            max-width: 250px;
+            word-wrap: break-word;
+            white-space: normal;
+            line-height: 1.4;
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .no-description {
+            color: #94a3b8;
+            font-style: italic;
+            font-size: 12px;
+        }
+
+        /* Ячейка с координатами */
+        .cell-coords {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #f1f5f9;
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #2563eb;
+        }
+
+        /* Фото в таблице */
+        .table-photos {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .table-photo {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #e2e8f0;
+        }
+
+        .table-photo:hover {
+            transform: scale(1.1);
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .photo-count {
+            background: #e2e8f0;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .no-photo {
+            color: #94a3b8;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Кнопки действий */
+        .cell-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-delete {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .btn-add-photo {
+            background: #dcfce7;
+            color: #16a34a;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-add-photo:hover {
+            background: #16a34a;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Подсветка поиска */
+        .highlight {
+            background-color: #fef08a;
+            color: #854d0e;
+            font-weight: bold;
+            padding: 0 2px;
+            border-radius: 4px;
+        }
+
+        /* Пустое состояние */
+        .empty-row td {
+            text-align: center;
+            padding: 60px !important;
+            color: #94a3b8;
+            font-size: 16px;
+        }
+
+        /* Адаптация */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .modern-table th,
+            .modern-table td {
+                padding: 10px 8px;
+                font-size: 12px;
+            }
+            
+            .table-photo {
+                width: 36px;
+                height: 36px;
+            }
+            
+            .btn-delete,
+            .btn-add-photo {
+                padding: 5px 10px;
+                font-size: 10px;
+            }
+            
+            .cell-coords {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+            
+            .cell-description {
+                max-width: 120px;
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Спортивные объекты</h2>
+        
+        <div id="map"></div>
+
+        <!-- ПОИСК -->
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="🔍 Поиск по названию или типу..." onkeyup="if(event.key === 'Enter') searchObjects()">
+            <button onclick="searchObjects()">🔍 Найти</button>
+            <button onclick="clearSearch()" class="clear-search">✖ Очистить</button>
+            <span id="searchResult" class="search-result"></span>
+        </div>
+
+        <!-- ФОРМА ДОБАВЛЕНИЯ -->
+        <div class="form-card">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>🏷️ Название</label>
+                    <input id="name" placeholder="Например: Стадион Динамо">
+                </div>
+                <div class="form-group">
+                    <label>📋 Тип</label>
+                    <input id="type" placeholder="Например: Футбольный стадион">
+                </div>
+                <div class="form-group">
+                    <label>🌍 Широта</label>
+                    <input id="lat" placeholder="55.75">
+                </div>
+                <div class="form-group">
+                    <label>📍 Долгота</label>
+                    <input id="lon" placeholder="37.62">
+                </div>
+            </div>
+            
+            <!-- НОВОЕ ПОЛЕ ОПИСАНИЯ -->
+            <div class="description-group">
+                <label>📝 Описание</label>
+                <textarea id="description" rows="3" placeholder="Введите описание объекта (например: часы работы, контакты, особенности...)"></textarea>
+            </div>
+            
+            <div class="photo-section">
+                <div class="photo-label">📷 Фотографии (до 5 штук)</div>
+                <input type="file" id="photos" accept="image/*" multiple>
+                <div id="preview" style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;"></div>
+            </div>
+            
+            <div class="form-actions">
+                <button onclick="addObjects()" class="btn-add">➕ Добавить объект</button>
+                <button onclick="deleteALLobjects()" class="btn-delete-all">🗑 Удалить всё</button>
+            </div>
+        </div>
+
+        <h3>Список спортивных объектов</h3>
+        
+        <div class="table-wrapper">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>🏷️ Название и тип</th>
+                        <th>📝 Описание</th>
+                        <th>📍 Координаты</th>
+                        <th>📷 Фотографии</th>
+                        <th>⚡ Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="list">
+                    <tr class="empty-row">
+                        <td colspan="5">Загрузка数据...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        // Инициализация карты
+        var map = L.map('map').setView([55.75, 37.62], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        var markers = L.layerGroup().addTo(map);
+
+        let selectedPhotos = [];
+        let allObjects = [];
+        let currentSearchTerm = '';
+
+        // Преобразование файла в base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Обработчик выбора фото
+        document.getElementById('photos').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            if (files.length > 5) {
+                alert('Можно загрузить не более 5 фото!');
+                this.value = '';
+                selectedPhotos = [];
+                document.getElementById('preview').innerHTML = '';
+                return;
+            }
+            selectedPhotos = files;
+            
+            const preview = document.getElementById('preview');
+            preview.innerHTML = '';
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const container = document.createElement('div');
+                    container.className = 'photo-container';
+                    container.innerHTML = `
+                        <img src="${e.target.result}" class="preview-img">
+                        <button class="remove-photo" data-index="${index}">×</button>
+                    `;
+                    preview.appendChild(container);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        // Удаление фото из превью
+        document.getElementById('preview').addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-photo')) {
+                const index = parseInt(e.target.dataset.index);
+                selectedPhotos.splice(index, 1);
+                const dataTransfer = new DataTransfer();
+                selectedPhotos.forEach(file => dataTransfer.items.add(file));
+                document.getElementById('photos').files = dataTransfer.files;
+                const event = new Event('change');
+                document.getElementById('photos').dispatchEvent(event);
+            }
+        });
+
+        // Подсветка текста
+        function highlightText(text, searchTerm) {
+            if (!searchTerm) return text;
+            const regex = new RegExp(`(${searchTerm})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        // Функция поиска
+        function searchObjects() {
+            const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+            currentSearchTerm = searchTerm;
+            
+            if (!searchTerm) {
+                clearSearch();
+                return;
+            }
+            
+            const filtered = allObjects.filter(obj => 
+                obj.name.toLowerCase().includes(searchTerm) || 
+                obj.type.toLowerCase().includes(searchTerm)
+            );
+            
+            const resultSpan = document.getElementById('searchResult');
+            if (filtered.length === 0) {
+                resultSpan.innerHTML = '❌ Ничего не найдено';
+                resultSpan.style.color = '#dc2626';
+            } else {
+                resultSpan.innerHTML = `✅ Найдено: ${filtered.length} объект(ов)`;
+                resultSpan.style.color = '#16a34a';
+            }
+            
+            displayObjects(filtered, searchTerm);
+        }
+
+        // Очистка поиска
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            currentSearchTerm = '';
+            document.getElementById('searchResult').innerHTML = '';
+            displayObjects(allObjects, '');
+        }
+
+        // Отображение объектов
+        function displayObjects(objects, searchTerm) {
+            markers.clearLayers();
+            let html = '';
+            
+            for (let o of objects) {
+                // Попап для карты
+                let descriptionText = o.description ? (o.description.length > 100 ? o.description.substring(0, 100) + '...' : o.description) : '';
+                let popupContent = `
+                    <div style="text-align: center; min-width: 200px;">
+                        <div style="font-weight: bold; font-size: 15px; margin-bottom: 6px;">${highlightText(o.name, searchTerm)}</div>
+                        <div style="color: #666; font-size: 12px; margin-bottom: 8px;">${highlightText(o.type, searchTerm)}</div>
+                        ${descriptionText ? `<div style="color: #666; font-size: 11px; margin-bottom: 8px; font-style: italic;">${highlightText(descriptionText, searchTerm)}</div>` : ''}
+                `;
+                
+                if (o.photos && o.photos.length > 0 && o.photos[0]) {
+                    popupContent += `<img src="${o.photos[0]}" style="max-width: 150px; max-height: 100px; border-radius: 8px; margin-bottom: 8px;">`;
+                } else {
+                    popupContent += `<div style="color: #999; margin-bottom: 8px;">📷 Нет фото</div>`;
+                }
+                
+                popupContent += `<button onclick="deleteObject(${o.id})" style="background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; margin-top: 5px;">🗑 Удалить</button>
+                    </div>`;
+                
+                // Маркер на карте
+                let marker;
+                if (o.photos && o.photos.length > 0 && o.photos[0]) {
+                    const customIcon = L.divIcon({
+                        html: `<img src="${o.photos[0]}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">`,
+                        iconSize: [40, 40],
+                        className: 'custom-marker-icon'
+                    });
+                    marker = L.marker([o.lat, o.lon], { icon: customIcon }).addTo(markers);
+                } else {
+                    marker = L.marker([o.lat, o.lon]).addTo(markers);
+                }
+                marker.bindPopup(popupContent);
+                
+                // ========== СТРОКА ТАБЛИЦЫ ==========
+                
+                // Название и тип
+                const nameTypeHtml = `
+                    <div class="cell-name">${highlightText(o.name, searchTerm)}</div>
+                    <div class="cell-type">${highlightText(o.type, searchTerm)}</div>
+                `;
+                
+                // Описание (НОВАЯ КОЛОНКА)
+                const descriptionHtml = o.description && o.description.trim() !== ''
+                    ? `<div class="cell-description">${highlightText(o.description, searchTerm)}</div>`
+                    : `<div class="no-description">Нет описания</div>`;
+                
+                // Координаты
+                const coordsHtml = `<span class="cell-coords">📍 ${o.lat.toFixed(4)}°, ${o.lon.toFixed(4)}°</span>`;
+                
+                // Фото
+                let photosHtml = '';
+                if (o.photos && o.photos.length > 0) {
+                    photosHtml = '<div class="table-photos">';
+                    const photosToShow = Math.min(o.photos.length, 3);
+                    for (let i = 0; i < photosToShow; i++) {
+                        if (o.photos[i]) {
+                            photosHtml += `<img src="${o.photos[i]}" class="table-photo" onclick="window.open('${o.photos[i]}')" title="Фото ${i+1}">`;
+                        }
+                    }
+                    if (o.photos.length > 3) {
+                        photosHtml += `<span class="photo-count">+${o.photos.length - 3}</span>`;
+                    }
+                    photosHtml += '</div>';
+                } else {
+                    photosHtml = '<div class="no-photo">📷 Нет фото</div>';
+                }
+                
+                // Кнопки действий
+                const actionsHtml = `
+                    <div class="cell-actions">
+                        <button class="btn-delete" onclick="deleteObject(${o.id})" title="Удалить объект">🗑 Удалить</button>
+                        <button class="btn-add-photo" onclick="addOnePhoto(${o.id})" title="Добавить фото">📷 + Фото</button>
+                    </div>
+                `;
+                
+                html += `
+                    <tr>
+                        <td>${nameTypeHtml}</td>
+                        <td>${descriptionHtml}</td>
+                        <td>${coordsHtml}</td>
+                        <td>${photosHtml}</td>
+                        <td>${actionsHtml}</td>
+                    </tr>
+                `;
+            }
+            
+            const tbody = document.getElementById('list');
+            if (html === '') {
+                tbody.innerHTML = '<tr class="empty-row"><td colspan="5">📭 Нет объектов. Добавьте первый спортивный объект!</td></tr>';
+            } else {
+                tbody.innerHTML = html;
+            }
+            
+            if (objects.length > 0 && searchTerm) {
+                map.setView([objects[0].lat, objects[0].lon], 14);
+            }
+        }
+
+        // Загрузка данных
+        async function loadData() {
+            try {
+                let res = await fetch('http://127.0.0.1:3000/api/objects');
+                allObjects = await res.json();
+                
+                if (currentSearchTerm) {
+                    searchObjects();
+                } else {
+                    displayObjects(allObjects, '');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                document.getElementById('list').innerHTML = '<tr class="empty-row"><td colspan="5">❌ Ошибка загрузки данных. Проверьте, запущен ли сервер.</td></tr>';
+            }
+        }
+
+        // Добавление объекта
+        async function addObjects() {
+            const name = document.getElementById('name').value.trim();
+            const type = document.getElementById('type').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const lat = parseFloat(document.getElementById('lat').value);
+            const lon = parseFloat(document.getElementById('lon').value);
+            
+            if (!name || !type) {
+                alert('❌ Заполните название и тип');
+                return;
+            }
+            
+            if (isNaN(lat) || isNaN(lon)) {
+                alert('❌ Введите корректные координаты');
+                return;
+            }
+            
+            if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+                alert('❌ Координаты: широта -90..90, долгота -180..180');
+                return;
+            }
+            
+            let photos = [];
+            if (selectedPhotos.length > 0) {
+                for (let file of selectedPhotos) {
+                    try {
+                        const base64 = await fileToBase64(file);
+                        photos.push(base64);
+                    } catch (error) {
+                        console.error('Ошибка конвертации фото:', error);
+                    }
+                }
+            }
+            
+            const data = { name, type, description, lat, lon, photos };
+            
+            try {
+                if (allObjects.some(obj => obj.name === name)) {
+                    alert('❌ Объект с таким названием уже существует');
+                    return;
+                }
+                
+                await fetch('http://127.0.0.1:3000/api/objects/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                document.getElementById('name').value = '';
+                document.getElementById('type').value = '';
+                document.getElementById('description').value = '';
+                document.getElementById('lat').value = '';
+                document.getElementById('lon').value = '';
+                document.getElementById('photos').value = '';
+                document.getElementById('preview').innerHTML = '';
+                selectedPhotos = [];
+                
+                alert('✅ Объект добавлен!');
+                loadData();
+            } catch (error) {
+                console.error('Ошибка добавления:', error);
+                alert('❌ Ошибка при добавлении объекта');
+            }
+        }
+
+        // Удаление объекта
+        async function deleteObject(id) {
+            if (confirm('Удалить объект?')) {
+                try {
+                    await fetch('http://127.0.0.1:3000/api/objects/' + id, { method: 'DELETE' });
+                    loadData();
+                } catch (error) {
+                    console.error('Ошибка удаления:', error);
+                }
+            }
+        }
+        
+        // Удаление всех объектов
+        async function deleteALLobjects() {
+            try {
+                if (allObjects.length === 0) {
+                    alert('Нет объектов для удаления');
+                    return;
+                }
+                
+                if (confirm(`Удалить все ${allObjects.length} объектов?`)) {
+                    for (let obj of allObjects) {
+                        await fetch('http://127.0.0.1:3000/api/objects/' + obj.id, { method: 'DELETE' });
+                    }
+                    alert('✅ Все объекты удалены');
+                    loadData();
+                }
+            } catch (error) {
+                console.error('Ошибка удаления:', error);
+            }
+        }
+
+                // Добавление фото к существующему объекту
+        async function addOnePhoto(id) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const base64 = await fileToBase64(file);
+                
+                try {
+                    let obj = allObjects.find(o => o.id === id);
+                    
+                    if (!obj) {
+                        alert('❌ Объект не найден');
+                        return;
+                    }
+                    
+                    let photos = obj.photos || [];
+                    if (photos.length >= 5) {
+                        alert('❌ Максимум 5 фото');
+                        return;
+                    }
+                    
+                    photos.push(base64);
+
+                    await fetch(`http://127.0.0.1:3000/api/objects/${id}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ ...obj, photos })
+                    });
+                    
+                    alert('✅ Фото добавлено!');
+                    loadData();
+                } catch (error) {
+                    console.error('Ошибка добавления фото:', error);
+                    alert('❌ Ошибка при добавлении фото');
+                }
+            };
+            input.click();
+        }
+        
+        // Загружаем данные при старте
+        loadData();
+    </script>
+</body>
+</html>
